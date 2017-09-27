@@ -1,0 +1,11 @@
+{
+  "name": "make-friends-by-what-they-read",
+  "version": "0.0.1",
+  "description": "A web crawler for douban.com to find people who live in the same place and have similar tastes with you.",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kat Zhang <arcadychang@gmail.com>",
+  "license": "ISC"
+}
