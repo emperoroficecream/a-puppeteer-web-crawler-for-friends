@@ -15,58 +15,64 @@ const LOGIN_SUBMIT_SELECTOR = '#lzform > fieldset > div.item.item-submit > input
 
   const list =  [ ENTRY_PATH_DOING, ENTRY_PATH_DONE, ENTRY_PATH_TO_DO ];
 
-  for (let i = 0; i < 3; ++i) {
-    let path = list[i];
+  // Helper function
 
-    await page.goto(`${STARTING_ENTRY}/${path}`);
-    await page.waitFor(5*1000);
-    const PERSON = 'div.sub_ins > table > tbody > tr > td:nth-child(2) > div > a';
-    let people = await page.evaluate(() => {
-      const PERSON = 'div.sub_ins > table > tbody > tr > td:nth-child(2) > div > a';
-      let els = [...document.querySelectorAll(PERSON)]; // Convert a node list to an array
-      console.log(els);
-      return JSON.stringify(els.reduce((result, p) => {
-        if (p.innerHTML.includes('(New York City)')) {
-          result.push(p.href);
-        }
-        return result;
-      }, []));
-    });
-    console.log(people);
-    if (people) {
+  // function checkForDataToScrape(page) {
+  //   const NEXT_BUTTON_SELECTOR = 'div.sub_ins > div > span.next > a';
+  //   const USER_DATA_SELECTOR = 'div.sub_ins > table';
+  //   const users = await page.evaluate((selector) => {
+  //     let users = [...document.querySelector(selector)];
+  //     return users.map(u => u.textContent.trim());
+  //   }, USER_DATA_SELECTOR);
+  //   if (users)
+  // }
+
+
+
+  // Helper function
+  async function filterElementsFor(page, selector, handleFilter) {
+    const elHandles = await page.$$(selector);
+    const filtered = await Promise.all(elHandles.map(async h => {
+      return await page.evaluate(handleFilter, h);
+    }));
+    return filtered.filter(Boolean); // Remove falsy values
+  }
+
+  function saveFindings(userPages) {
+    if (userPages && userPages.length) {
       // We found treasure! Save their emails and send them later
-      const file = require('fs').createWriteStream('friends.txt');
-      file.write(people);
+      const file = require('fs').createWriteStream('friends.txt',  {'flags': 'a'});
+      userPages.forEach(p => {
+        file.write(p + '\n');
+      })
       file.end();
     }
   }
 
-  // [ ENTRY_PATH_DOING, ENTRY_PATH_DONE, ENTRY_PATH_TO_DO ].forEach((path) => {
-  //   const STARTING_ENTRY = 'https://book.douban.com/subject/1382917';
+  const NEXT_BUTTON_SELECTOR = 'div.sub_ins > div > span.next > a';
 
-  //   const PERSON = 'div.sub_ins > table > tbody > tr > td:nth-child(2) > div > a';
+  for (let i = 0; i < list.length; ++i) {
+    let path = list[i];
 
-  //   await page.goto(`${STARTING_ENTRY}/${path}`);
-  //   const people = await page.evaluate(() => {
-  //     return document.querySelectorAll(PERSON);
-  //   });
-  //   people = Array.apply(null, people); // Convert a node list to an array
-  //   const peopleInSameLocation = people.reduce((result, p) => {
-  //     if (p.innerHTML.includes('(New York City)')) {
-  //       result.push(p.href);
-  //     }
-  //     return result;
-  //   }, []);
-  //   if (peopleInSameLocation && peopleInSameLocation.length) {
-  //     // We found treasure! Save their emails and send them later
-  //     const file = require('fs').createWriteStream('friends.txt');
-  //     peopleInSameLocation.forEach((p) => {
-  //       file.write(p + '\n');
-  //     });
-  //     file.end();
-  //   }
-  // });
+    await page.goto(`${STARTING_ENTRY}/${path}`);
+    const USER_HOME_PAGE = 'div.sub_ins > table > tbody > tr > td:nth-child(2) > div > a';
+    const userFilter = function(userHandle) {
+      const LOCATION_OF_INTEREST = 'New York City';
+      if (userHandle.innerHTML && userHandle.innerHTML.includes(`(${LOCATION_OF_INTEREST})`)) {
+        return userHandle.href;
+      }
+    }
 
+    let filteredUsers = [];
+    while(await page.$(USER_HOME_PAGE)) {
+      filteredUsers = filteredUsers.concat(await filterElementsFor(page, USER_HOME_PAGE, userFilter));
+      await page.click(NEXT_BUTTON_SELECTOR);
+      await page.waitForNavigation();
+    }
+
+    console.log(filteredUsers);
+    saveFindings(filteredUsers);
+  }
 
   await browser.close();
 })();
