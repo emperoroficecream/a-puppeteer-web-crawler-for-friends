@@ -13,22 +13,7 @@ const LOGIN_SUBMIT_SELECTOR = '#lzform > fieldset > div.item.item-submit > input
   const ENTRY_PATH_DOING = 'doings';
   const ENTRY_PATH_DONE = 'collections'; 
 
-  const list =  [ ENTRY_PATH_DOING, ENTRY_PATH_DONE, ENTRY_PATH_TO_DO ];
-
-  // Helper function
-
-  // function checkForDataToScrape(page) {
-  //   const NEXT_BUTTON_SELECTOR = 'div.sub_ins > div > span.next > a';
-  //   const USER_DATA_SELECTOR = 'div.sub_ins > table';
-  //   const users = await page.evaluate((selector) => {
-  //     let users = [...document.querySelector(selector)];
-  //     return users.map(u => u.textContent.trim());
-  //   }, USER_DATA_SELECTOR);
-  //   if (users)
-  // }
-
-
-
+  const ENTRY_SUB_DOMAINS =  [ ENTRY_PATH_DOING, ENTRY_PATH_DONE, ENTRY_PATH_TO_DO ];
   // Helper function
   async function filterElementsFor(page, selector, handleFilter) {
     const elHandles = await page.$$(selector);
@@ -51,8 +36,8 @@ const LOGIN_SUBMIT_SELECTOR = '#lzform > fieldset > div.item.item-submit > input
 
   const NEXT_BUTTON_SELECTOR = 'div.sub_ins > div > span.next > a';
 
-  for (let i = 0; i < list.length; ++i) {
-    let path = list[i];
+  for (let i = 0; i < ENTRY_SUB_DOMAINS.length; ++i) {
+    let path = ENTRY_SUB_DOMAINS[i];
 
     await page.goto(`${STARTING_ENTRY}/${path}`);
     const USER_HOME_PAGE = 'div.sub_ins > table > tbody > tr > td:nth-child(2) > div > a';
