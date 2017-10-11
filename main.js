@@ -1,4 +1,7 @@
 const puppeteer = require('puppeteer');
+const mongoose = require('mongoose');
+const User = require('./models/user');
+
 const EMAIL_SELECTOR = '#form_email';
 const PASSWORD_SELECTOR = '#form_password';
 const LOGIN_SUBMIT_SELECTOR = '#lzform > fieldset > div.item.item-submit > input';
@@ -26,31 +29,51 @@ const LOGIN_SUBMIT_SELECTOR = '#lzform > fieldset > div.item.item-submit > input
   function saveFindings(userPages) {
     if (userPages && userPages.length) {
       // We found treasure! Save their emails and send them later
-      const file = require('fs').createWriteStream('friends.txt',  {'flags': 'a'});
-      userPages.forEach(p => {
-        file.write(p + '\n');
+      userPages.forEach(page => {
+        upsertUser({
+          url: page,
+          dateCrawled: new Date()
+        })
       })
-      file.end();
+    }
+  }
+
+  function upsertUser(userObj) {
+    const DB_URL = 'mongodb://localhost:1029/friends';
+
+    if (mongoose.connection.readyState == 0) {
+      mongoose.connect(DB_URL);
+    }
+
+    let conditions = { url: userObj.url };
+    let options = {
+      upsert: true,
+      new: true, 
+      setDefaultsOnInsert: true
+    };
+
+    User.findOneAndUpdate(conditions, userObj, options, (err, result) => {
+      if (err) throw err;
+    })
+  }
+
+  function filterUserByLocation(userHandle) {
+    const LOCATION_OF_INTEREST = 'New York City';
+    if (userHandle.innerHTML && userHandle.innerHTML.includes(`(${LOCATION_OF_INTEREST})`)) {
+      return userHandle.href; 
     }
   }
 
   const NEXT_BUTTON_SELECTOR = 'div.sub_ins > div > span.next > a';
+  const USER_HOME_PAGE = 'div.sub_ins > table > tbody > tr > td:nth-child(2) > div > a';
 
   for (let i = 0; i < ENTRY_SUB_DOMAINS.length; ++i) {
     let path = ENTRY_SUB_DOMAINS[i];
 
     await page.goto(`${STARTING_ENTRY}/${path}`);
-    const USER_HOME_PAGE = 'div.sub_ins > table > tbody > tr > td:nth-child(2) > div > a';
-    const userFilter = function(userHandle) {
-      const LOCATION_OF_INTEREST = 'New York City';
-      if (userHandle.innerHTML && userHandle.innerHTML.includes(`(${LOCATION_OF_INTEREST})`)) {
-        return userHandle.href;
-      }
-    }
-
     let filteredUsers = [];
     while(await page.$(USER_HOME_PAGE)) {
-      filteredUsers = filteredUsers.concat(await filterElementsFor(page, USER_HOME_PAGE, userFilter));
+      filteredUsers = filteredUsers.concat(await filterElementsFor(page, USER_HOME_PAGE, filterUserByLocation));
       await page.click(NEXT_BUTTON_SELECTOR);
       await page.waitForNavigation();
     }
